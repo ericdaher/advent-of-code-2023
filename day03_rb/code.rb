@@ -6,52 +6,64 @@ class AoCDay03
   end
 
   def task_01
-    sum = 0
-    positions = []
-    schematic.chars.each.with_index do |char, index|
-      if char.match(/[0-9]/)
-        positions << index
-        if schematic.chars[index + 1].match(/[0-9]/)
-          next
-        else
-          no_symbols = positions.all? do |position|
-            adjacent_positions(position, line_length).all? do |adjacent_position|
-              schematic[adjacent_position].match(/[0-9]|\./)
-            end
-          end
-          sum = sum + positions.map { |p| schematic[p] }.join.to_i if !no_symbols
-          positions = []
+    symbols = []
+    schematic.scan(/[^\.\w]/) do |c|
+      symbols << adjacent_positions(Regexp.last_match.offset(0)[0], line_length).flatten
+    end
+    symbols.flatten!.uniq!
+
+    numbers = {}
+    schematic.scan(/[0-9]+/) do |c|
+      if numbers[c].nil?
+        numbers[c] = []
+        c.length.times do |n|
+          numbers[c] << Regexp.last_match.offset(0)[0] + n
+        end
+      else
+        leading_zeroes = 0
+        leading_zeroes += 1 until numbers['0' * leading_zeroes + c].nil?
+        numbers['0' * leading_zeroes + c] = []
+        c.length.times do |n|
+          numbers['0' * leading_zeroes + c] << Regexp.last_match.offset(0)[0] + n
         end
       end
     end
-    sum
+
+    numbers.select { |k, v| (v & symbols).length > 0 }.keys.map(&:to_i).sum
   end
 
   def task_02
-    positions = []
-    gears = {}
-    schematic.chars.each.with_index do |char, index|
-      if char.match(/[0-9]/)
-        positions << index
-        if schematic.chars[index + 1].match(/[0-9]/)
-          next
-        else
-          gear_symbol_position = 0
-          gear_symbol = positions.any? do |position|
-            adjacent_positions(position, line_length).any? do |adjacent_position|
-              gear_symbol_position = adjacent_position if schematic[adjacent_position].match(/\*/)
-              schematic[adjacent_position].match(/\*/)
-            end
-          end
-          if gear_symbol
-            gears[gear_symbol_position] = [] if gears[gear_symbol_position].nil?
-            gears[gear_symbol_position] << positions.map { |p| schematic[p] }.join.to_i
-          end
-          positions = []
+    symbols = []
+    schematic.scan(/\*/) do |c|
+      symbols << adjacent_positions(Regexp.last_match.offset(0)[0], line_length)
+    end
+    symbols
+
+    numbers = {}
+    schematic.scan(/[0-9]+/) do |c|
+      if numbers[c].nil?
+        numbers[c] = []
+        c.length.times do |n|
+          numbers[c] << Regexp.last_match.offset(0)[0] + n
+        end
+      else
+        leading_zeroes = 0
+        leading_zeroes += 1 until numbers['0' * leading_zeroes + c].nil?
+        numbers['0' * leading_zeroes + c] = []
+        c.length.times do |n|
+          numbers['0' * leading_zeroes + c] << Regexp.last_match.offset(0)[0] + n
         end
       end
     end
-    gears.filter { |gear_position, values| values.length == 2 }.map { |gear_position, values| values[0] * values[1] }.sum
+
+    gears = []
+    symbols.each.with_index do |symbol_position, index|
+      gears[index] = []
+      numbers.each do |k, v|
+        gears[index] << k.to_i if (symbol_position & v).length > 0
+      end
+    end
+    gears.select { |arr| arr.length == 2}.map { |arr| arr[0] * arr[1] }.sum
   end
 
   private
@@ -72,6 +84,6 @@ class AoCDay03
       position + 1 - length,
       position + 1,
       position + 1 + length,
-    ]
+    ].select { |n| n > 0}
   end
 end
